@@ -18,6 +18,7 @@ PROFILES = {
     "core": [
         "--with-openssl",
         "--without-gnutls",
+        "--disable-nls",
         "--without-libnettle",
         "--without-libgcrypt",
         "--without-libxml2",
@@ -30,6 +31,7 @@ PROFILES = {
     "full": [
         "--with-openssl",
         "--without-gnutls",
+        "--disable-nls",
         "--without-libnettle",
         "--without-libgcrypt",
         "--without-libxml2",
