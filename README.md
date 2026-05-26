@@ -22,13 +22,13 @@ sudo apt-get install -y \
 python3 scripts/build_wheel.py
 ```
 
-正式分发 GNU/glibc Linux wheel 时，推荐用 PyPA manylinux 容器构建：
+正式分发 GNU/glibc Linux wheel 时，CI 使用 Ubuntu 容器构建静态 `aria2c`：
 
 ```bash
 python3 scripts/build_linux_manylinux.py --arch x86_64
 ```
 
-默认产物标签是 `manylinux_2_28_x86_64` 或 `manylinux_2_28_aarch64`。
+默认产物标签仍是 `manylinux_2_28_x86_64` 或 `manylinux_2_28_aarch64`。
 
 分发 musl Linux wheel 时，使用 Alpine/musl 容器构建：
 
@@ -36,7 +36,7 @@ python3 scripts/build_linux_manylinux.py --arch x86_64
 python3 scripts/build_linux_musl.py --arch x86_64
 ```
 
-manylinux 和 musllinux 这两条路径都需要本机可用的 Docker。
+Linux 和 musllinux 这两条路径都需要本机可用的 Docker。
 
 默认构建参数如下：
 
@@ -90,8 +90,9 @@ Intel macOS 可以把 `ARCH` 改成 `x86_64`，并使用
 
 Windows CI 默认在 `windows-2022` runner 上使用 MSYS2 UCRT64/MinGW 直接编译，
 依赖通过 MSYS2 `pacman` 安装，避免在 Docker 构建阶段逐个下载第三方源码。
-构建脚本会使用 WinTLS，静态链接 zlib、expat 和 sqlite，然后生成 `win_amd64`
-wheel。
+构建脚本会使用 WinTLS，静态链接 zlib、expat 和 sqlite，并禁用 WebSocket RPC
+以避开 aria2 内置 wslay 子项目在 MSYS2 下的旧 `configure` 兼容问题，然后生成
+`win_amd64` wheel。
 
 ```bash
 python scripts/build_windows_msys2.py

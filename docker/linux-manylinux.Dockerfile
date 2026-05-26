@@ -1,31 +1,29 @@
-ARG MANYLINUX_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
-FROM ${MANYLINUX_IMAGE}
+ARG LINUX_IMAGE=ubuntu:24.04
+FROM ${LINUX_IMAGE}
 
-RUN set -eux; \
-    dnf install -y dnf-plugins-core; \
-    (dnf config-manager --set-enabled powertools || \
-        dnf config-manager --set-enabled PowerTools || \
-        dnf config-manager --set-enabled crb || \
-        true); \
-    dnf install -y \
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     autoconf \
     automake \
-    expat-devel \
-    expat-static \
+    autopoint \
+    binutils \
+    ca-certificates \
     file \
-    gettext-devel \
+    g++ \
+    gettext \
     git \
-    glibc-static \
+    libexpat1-dev \
+    libssl-dev \
+    libsqlite3-dev \
     libtool \
-    libstdc++-static \
     make \
-    openssl-devel \
-    openssl-static \
-    pkgconf-pkg-config \
-    sqlite-devel \
-    sqlite-static \
-    zlib-devel \
-    zlib-static && \
-    dnf clean all
+    pkg-config \
+    python3 \
+    python3-pip \
+    python3-venv \
+    zlib1g-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

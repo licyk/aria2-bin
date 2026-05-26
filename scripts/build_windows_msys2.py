@@ -39,6 +39,7 @@ CONFIGURE_ARGS = [
     "--with-libexpat",
     "--with-libz",
     "--with-sqlite3",
+    "--disable-websocket",
     "--without-libcares",
     "--without-libssh2",
     "ARIA2_STATIC=yes",

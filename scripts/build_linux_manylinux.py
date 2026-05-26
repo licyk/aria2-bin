@@ -27,10 +27,11 @@ def run(cmd: list[str], cwd: Path = ROOT, env: dict[str, str] | None = None) -> 
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build a manylinux wheel in a PyPA manylinux container.")
+    parser = argparse.ArgumentParser(description="Build a Linux wheel in an Ubuntu container.")
     parser.add_argument("--arch", default=os.environ.get("ARIA2_MANYLINUX_ARCH", default_arch()))
     parser.add_argument("--policy", default=os.environ.get("ARIA2_MANYLINUX_POLICY", DEFAULT_POLICY))
     parser.add_argument("--image", default=os.environ.get("ARIA2_MANYLINUX_IMAGE", "aria2-bin-linux-manylinux"))
+    parser.add_argument("--build-image", default=os.environ.get("ARIA2_LINUX_BUILD_IMAGE", "ubuntu:24.04"))
     parser.add_argument("--platform-tag", default=os.environ.get("ARIA2_WHEEL_PLATFORM_TAG"))
     parser.add_argument("--profile", default=os.environ.get("ARIA2_STATIC_PROFILE", "core"))
     return parser.parse_args(argv)
@@ -39,7 +40,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     platform_tag = args.platform_tag or f"{args.policy}_{args.arch}"
-    manylinux_image = f"quay.io/pypa/{args.policy}_{args.arch}"
 
     run(
         [
@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
             "-t",
             args.image,
             "--build-arg",
-            f"MANYLINUX_IMAGE={manylinux_image}",
+            f"LINUX_IMAGE={args.build_image}",
             ".",
         ]
     )
@@ -76,12 +76,10 @@ def main(argv: list[str] | None = None) -> int:
             "-w",
             "/workspace",
             args.image,
-            "sh",
-            "-c",
-            (
-                "PYTHON=$(ls -d /opt/python/cp3*-cp3*/bin/python | sort -V | tail -n1); "
-                f'"$PYTHON" scripts/build_wheel.py --platform-tag {platform_tag}'
-            ),
+            "python3",
+            "scripts/build_wheel.py",
+            "--platform-tag",
+            platform_tag,
         ]
     )
     return 0

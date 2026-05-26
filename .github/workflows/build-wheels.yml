@@ -33,6 +33,7 @@ jobs:
         env:
           ARIA2_MANYLINUX_ARCH: ${{ matrix.arch }}
           ARIA2_MANYLINUX_POLICY: manylinux_2_28
+          ARIA2_LINUX_BUILD_IMAGE: ubuntu:24.04
           ARIA2_STATIC_PROFILE: core
           ARIA2_WHEEL_PLATFORM_TAG: manylinux_2_28_${{ matrix.arch }}
         run: python3 scripts/build_linux_manylinux.py
@@ -41,16 +42,16 @@ jobs:
           {
             echo "### Linux manylinux"
             echo "- platform tag: manylinux_2_28_${{ matrix.arch }}"
-            echo "- build image: quay.io/pypa/manylinux_2_28_${{ matrix.arch }}"
-            echo "- smoke test: same manylinux container"
+            echo "- build image: ubuntu:24.04"
+            echo "- smoke test: Ubuntu container"
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Smoke test manylinux wheel in manylinux container
+      - name: Smoke test manylinux wheel in Ubuntu container
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
             aria2-bin-linux-manylinux \
-            sh -c 'PYTHON=$(ls -d /opt/python/cp3*-cp3*/bin/python | sort -V | tail -n1); "$PYTHON" -m pip install --no-cache-dir dist/aria2_bin-*.whl && "$PYTHON" -m aria2_bin._run --version'
+            sh -c 'python3 -m venv /tmp/aria2-bin-venv && /tmp/aria2-bin-venv/bin/python -m pip install --no-cache-dir dist/aria2_bin-*.whl && /tmp/aria2-bin-venv/bin/python -m aria2_bin._run --version'
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-linux-manylinux-${{ matrix.arch }}
