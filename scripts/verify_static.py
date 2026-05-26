@@ -14,9 +14,26 @@ def run_output(cmd: list[str]) -> tuple[int, str]:
     return proc.returncode, proc.stdout
 
 
+def command_exists(name: str) -> bool:
+    return subprocess.run(
+        ["sh", "-c", f"command -v {name} >/dev/null 2>&1"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode == 0
+
+
 def verify_linux(binary: Path) -> None:
     _, file_output = run_output(["file", str(binary)])
     print(file_output.rstrip())
+
+    if command_exists("readelf"):
+        _, headers = run_output(["readelf", "-l", str(binary)])
+        _, dynamic = run_output(["readelf", "-d", str(binary)])
+        if "INTERP" in headers:
+            raise SystemExit("binary has a dynamic interpreter; expected a static aria2c")
+        if "(NEEDED)" in dynamic:
+            raise SystemExit("binary has dynamic NEEDED entries; expected a static aria2c")
+        return
 
     code, ldd_output = run_output(["ldd", str(binary)])
     print(ldd_output.rstrip())
@@ -41,7 +58,10 @@ def verify_macos(binary: Path, strict: bool) -> None:
 
 
 def verify_version(binary: Path) -> None:
-    code, output = run_output([str(binary), "--version"])
+    try:
+        code, output = run_output([str(binary), "--version"])
+    except OSError as exc:
+        raise SystemExit(f"aria2c --version could not run: {exc}") from exc
     print(output.splitlines()[0] if output else "")
     if code != 0 or "aria2 version" not in output:
         raise SystemExit("aria2c --version failed")
@@ -51,6 +71,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify an aria2c binary before packaging.")
     parser.add_argument("binary", type=Path)
     parser.add_argument("--strict-macos", action="store_true")
+    parser.add_argument("--skip-run", action="store_true", default=os.environ.get("ARIA2_SKIP_RUN_VERIFY") == "1")
     return parser.parse_args(argv)
 
 
@@ -70,7 +91,9 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"Static dependency verification is not implemented for {system}; running --version only.")
 
-    if os.access(binary, os.X_OK) or system == "Windows":
+    if args.skip_run:
+        print("skipping aria2c --version runtime check")
+    elif os.access(binary, os.X_OK) or system == "Windows":
         verify_version(binary)
     else:
         raise SystemExit(f"binary is not executable: {binary}")

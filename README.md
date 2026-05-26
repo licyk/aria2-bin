@@ -80,21 +80,27 @@ Intel macOS 可以把 `ARCH` 改成 `x86_64`，并使用
 
 ## Windows 构建
 
-Windows 构建参考 aria2 上游的 mingw-w64 路线：在 Ubuntu 容器中交叉编译依赖和
-`aria2c.exe`，再生成 `win_amd64` wheel。
+Windows CI 默认在 `windows-2022` runner 上使用 MSYS2 UCRT64/MinGW 直接编译，
+依赖通过 MSYS2 `pacman` 安装，避免在 Docker 构建阶段逐个下载第三方源码。
+构建脚本会使用 WinTLS，静态链接 zlib、expat 和 sqlite，然后生成 `win_amd64`
+wheel。
 
 ```bash
-python3 scripts/build_windows_mingw.py
+python scripts/build_windows_msys2.py
 ```
-
-这条路径同样需要本机可用的 Docker。
 
 默认目标是：
 
 ```text
-MINGW_HOST=x86_64-w64-mingw32
+MSYSTEM=UCRT64
 ARIA2_WHEEL_PLATFORM_TAG=win_amd64
 ```
+
+如果需要回退到传统 MINGW64 环境，可以设置 `MSYSTEM=MINGW64`，但 CI 默认使用
+UCRT64。
+
+仓库中仍保留 `scripts/build_windows_mingw.py` 和 `docker/windows-mingw.Dockerfile`，
+用于复刻 aria2 上游的 Linux mingw-w64 交叉编译路线，但 CI 不再默认使用它。
 
 ## 使用 uv 构建
 

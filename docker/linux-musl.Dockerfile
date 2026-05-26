@@ -14,6 +14,7 @@ RUN apk add --no-cache \
     openssl-dev \
     openssl-libs-static \
     pkgconf \
+    py3-pip \
     python3 \
     sqlite-dev \
     sqlite-static \

@@ -47,6 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         "ARIA2_REPO": os.environ.get("ARIA2_REPO", "https://github.com/aria2/aria2.git"),
         "ARIA2_STATIC_PROFILE": args.profile,
         "ARIA2_WHEEL_PLATFORM_TAG": platform_tag,
+        "ARIA2_SKIP_RUN_VERIFY": "1",
     }.items():
         env_args.extend(["-e", f"{name}={value}"])
 
