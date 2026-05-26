@@ -1,0 +1,41 @@
+[build-system]
+requires = [
+  "tomli; python_version < '3.11'",
+]
+build-backend = "_build_backend"
+backend-path = ["."]
+
+[project]
+name = "aria2-bin"
+version = "1.37.0"
+description = "Prebuilt aria2c executable packaged as platform-specific Python wheels."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "GPL-2.0-or-later" }
+authors = [
+  { name = "licyk" }
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Topic :: Internet :: File Transfer Protocol (FTP)",
+  "Topic :: System :: Archiving :: Packaging",
+]
+
+[project.urls]
+Homepage = "https://github.com/licyk"
+Source = "https://github.com/aria2/aria2"
+
+[project.scripts]
+aria2c = "aria2_bin._run:main"
+
+[tool.aria2-bin]
+aria2-repository = "https://github.com/aria2/aria2.git"
+aria2-ref = "release-1.37.0"
+static-profile = "core"
