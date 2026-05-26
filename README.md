@@ -6,7 +6,7 @@
 
 ## 本地构建
 
-请先安装系统构建依赖。Ubuntu 上直接构建本机 `linux_x86_64` wheel 时，
+请先安装系统构建依赖。Ubuntu 上直接构建本机 wheel 时，
 默认的 `core` 静态构建配置需要：
 
 ```bash
@@ -16,19 +16,27 @@ sudo apt-get install -y \
   pkg-config libssl-dev libexpat1-dev zlib1g-dev libsqlite3-dev python3 python3-venv
 ```
 
-然后构建 wheel：
+然后构建当前平台 wheel：
 
 ```bash
 python3 scripts/build_wheel.py
 ```
 
-正式分发 Linux wheel 时，推荐用 musl 容器构建 `musllinux` wheel：
+正式分发 GNU/glibc Linux wheel 时，推荐用 PyPA manylinux 容器构建：
+
+```bash
+python3 scripts/build_linux_manylinux.py --arch x86_64
+```
+
+默认产物标签是 `manylinux_2_28_x86_64` 或 `manylinux_2_28_aarch64`。
+
+分发 musl Linux wheel 时，使用 Alpine/musl 容器构建：
 
 ```bash
 python3 scripts/build_linux_musl.py --arch x86_64
 ```
 
-这条路径需要本机可用的 Docker。
+manylinux 和 musllinux 这两条路径都需要本机可用的 Docker。
 
 默认构建参数如下：
 
@@ -127,6 +135,8 @@ aria2c --version
 wheel。当前 CI 会构建这些目标：
 
 ```text
+manylinux_2_28_x86_64
+manylinux_2_28_aarch64
 musllinux_1_2_x86_64
 musllinux_1_2_aarch64
 macosx_10_13_x86_64
@@ -137,6 +147,7 @@ win_amd64
 交叉构建或手动指定平台标签时，可以覆盖 `ARIA2_WHEEL_PLATFORM_TAG`：
 
 ```bash
+ARIA2_WHEEL_PLATFORM_TAG=manylinux_2_28_x86_64 python3 scripts/build_wheel.py
 ARIA2_WHEEL_PLATFORM_TAG=musllinux_1_2_x86_64 python3 scripts/build_wheel.py
 ARIA2_WHEEL_PLATFORM_TAG=macosx_11_0_arm64 python3 scripts/build_wheel.py
 ARIA2_WHEEL_PLATFORM_TAG=win_amd64 python3 scripts/build_wheel.py
