@@ -16,8 +16,8 @@ env:
   ARIA2_REF: ${{ github.event.inputs.aria2_ref || 'release-1.37.0' }}
 
 jobs:
-  linux:
-    name: linux-${{ matrix.arch }}
+  linux-manylinux:
+    name: linux-manylinux-${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
@@ -29,21 +29,70 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build musllinux wheel
+      - name: Build manylinux_2_28 wheel
+        env:
+          ARIA2_MANYLINUX_ARCH: ${{ matrix.arch }}
+          ARIA2_MANYLINUX_POLICY: manylinux_2_28
+          ARIA2_STATIC_PROFILE: core
+          ARIA2_WHEEL_PLATFORM_TAG: manylinux_2_28_${{ matrix.arch }}
+        run: python3 scripts/build_linux_manylinux.py
+      - name: Summarize manylinux target
+        run: |
+          {
+            echo "### Linux manylinux"
+            echo "- platform tag: manylinux_2_28_${{ matrix.arch }}"
+            echo "- build image: quay.io/pypa/manylinux_2_28_${{ matrix.arch }}"
+            echo "- smoke test: same manylinux container"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test manylinux wheel in manylinux container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            aria2-bin-linux-manylinux \
+            sh -c 'PYTHON=$(ls -d /opt/python/cp3*-cp3*/bin/python | sort -V | tail -n1); "$PYTHON" -m pip install --no-cache-dir dist/aria2_bin-*.whl && "$PYTHON" -m aria2_bin._run --version'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-manylinux-${{ matrix.arch }}
+          path: dist/*.whl
+
+  linux-musl:
+    name: linux-musl-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build musllinux_1_2 wheel
         env:
           ARIA2_MUSL_ARCH: ${{ matrix.arch }}
           ARIA2_STATIC_PROFILE: core
           ARIA2_WHEEL_PLATFORM_TAG: musllinux_1_2_${{ matrix.arch }}
         run: python3 scripts/build_linux_musl.py
-      - name: Smoke test wheel
+      - name: Summarize musllinux target
         run: |
-          python3 -m venv .venv
-          . .venv/bin/activate
-          pip install dist/aria2_bin-*.whl
-          aria2c --version
+          {
+            echo "### Linux musllinux"
+            echo "- platform tag: musllinux_1_2_${{ matrix.arch }}"
+            echo "- build image: Alpine musl"
+            echo "- smoke test: Alpine musl container"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test musllinux wheel in Alpine container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            aria2-bin-linux-musl \
+            sh -c 'python3 -m pip install --no-cache-dir --break-system-packages dist/aria2_bin-*.whl && aria2c --version'
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-${{ matrix.arch }}
+          name: wheels-linux-musl-${{ matrix.arch }}
           path: dist/*.whl
 
   macos:
@@ -52,10 +101,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
-            runner: macos-13
-            deployment_target: "10.13"
-            platform_tag: macosx_10_13_x86_64
+          # - arch: x86_64
+          #   runner: macos-13
+          #   deployment_target: "10.13"
+          #   platform_tag: macosx_10_13_x86_64
+          # 暂时禁用这个
           - arch: arm64
             runner: macos-14
             deployment_target: "11.0"
@@ -94,14 +144,48 @@ jobs:
 
   windows:
     name: windows-amd64
-    runs-on: ubuntu-24.04
+    runs-on: windows-2022
     env:
-      MINGW_HOST: x86_64-w64-mingw32
       ARIA2_WHEEL_PLATFORM_TAG: win_amd64
     steps:
       - uses: actions/checkout@v4
-      - name: Build Windows wheel with mingw-w64
-        run: python3 scripts/build_windows_mingw.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: minimal
+          install: >-
+            base-devel
+            git
+            gettext-devel
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-expat
+            mingw-w64-ucrt-x86_64-sqlite3
+            mingw-w64-ucrt-x86_64-zlib
+      - name: Build Windows wheel with MSYS2 UCRT64
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+        run: python scripts/build_windows_msys2.py
+      - name: Summarize Windows target
+        shell: pwsh
+        run: |
+          @"
+          ### Windows
+          - platform tag: win_amd64
+          - MSYSTEM: UCRT64
+          - package prefix: mingw-w64-ucrt-x86_64
+          "@ >> $env:GITHUB_STEP_SUMMARY
+      - name: Smoke test Windows wheel on Windows
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install dist\aria2_bin-*.whl
+          .\.venv\Scripts\aria2c.exe --version
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-windows-amd64
