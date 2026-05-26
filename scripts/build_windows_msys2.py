@@ -169,7 +169,10 @@ def build_aria2(source_dir: Path, jobs: int, args: argparse.Namespace) -> Path:
     )
     run_bash(
         f"""
-autoreconf -i
+if [ ! -f ./configure ]; then
+  autoreconf -i
+fi
+chmod +x ./configure
 PKG_CONFIG="$(command -v pkg-config || command -v pkgconf)"
 ./configure {configure_args} \\
   CPPFLAGS="-I{prefix}/include" \\

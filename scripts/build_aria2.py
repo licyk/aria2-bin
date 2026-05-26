@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -125,6 +126,14 @@ def configure_dependency_prefix(env: dict[str, str], prefix: Path | None) -> Non
     prepend_env_path(env, "PKG_CONFIG_PATH", prefix / "lib" / "pkgconfig")
 
 
+def ensure_configure(source_dir: Path, env: dict[str, str]) -> None:
+    configure = source_dir / "configure"
+    if configure.exists():
+        configure.chmod(configure.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        return
+    run(["autoreconf", "-i"], source_dir, env=env)
+
+
 def build(args: argparse.Namespace) -> Path:
     source_dir = args.work_dir / "src"
     clone_source(args.repo, args.ref, source_dir)
@@ -138,7 +147,7 @@ def build(args: argparse.Namespace) -> Path:
     if args.configure_arg:
         configure_args.extend(args.configure_arg)
 
-    run(["autoreconf", "-i"], source_dir, env=env)
+    ensure_configure(source_dir, env)
     run(configure_args, source_dir, env=env)
     run(["make", f"-j{args.jobs}"], source_dir, env=env)
 

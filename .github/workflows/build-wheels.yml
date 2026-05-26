@@ -162,6 +162,7 @@ jobs:
             base-devel
             git
             gettext-devel
+            mingw-w64-ucrt-x86_64-autotools
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-expat
