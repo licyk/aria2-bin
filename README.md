@@ -30,13 +30,22 @@ python3 scripts/build_linux_manylinux.py --arch x86_64
 
 默认产物标签仍是 `manylinux_2_28_x86_64` 或 `manylinux_2_28_aarch64`。
 
-分发 musl Linux wheel 时，使用 Alpine/musl 容器构建：
+分发 musl Linux wheel 时，CI 使用 Alpine/musl 容器源码构建。容器会先构建一份
+静态 OpenSSL，并使用 `no-shared no-module enable-legacy`，避免 Alpine 系统
+`openssl-libs-static` 在干净容器中运行时找不到 OpenSSL `legacy` provider：
 
 ```bash
 python3 scripts/build_linux_musl.py --arch x86_64
 ```
 
-Linux 和 musllinux 这两条路径都需要本机可用的 Docker。
+如果需要临时参考 `aria2-wheel` 的做法，直接使用 `abcfy2/aria2-static-build`
+的预编译静态产物，可以加 `--from-static`：
+
+```bash
+python3 scripts/build_linux_musl.py --arch x86_64 --from-static
+```
+
+GNU/glibc Linux 和 musllinux 源码构建路径都需要本机可用的 Docker。
 
 默认构建参数如下：
 
@@ -45,8 +54,18 @@ ARIA2_REF=release-1.37.0
 ARIA2_STATIC_PROFILE=core
 ```
 
+Windows，以及 musllinux 的 `--from-static` 备用路径，会使用 `ARIA2_REF` 推导
+`aria2-static-build` 发布版本，例如 `release-1.37.0` 会下载 `1.37.0` 发布页
+下的静态 zip。也可以显式覆盖：
+
+```bash
+ARIA2_STATIC_RELEASE=1.37.0 python3 scripts/build_linux_musl.py --arch x86_64 --from-static
+```
+
 GitHub Actions 手动运行 `build-wheels` 工作流时，可以在页面上填写 `aria2_ref`
-来指定要构建的 aria2 tag、分支或 commit。
+来指定要构建的 aria2 release tag。Windows 使用预编译静态产物，因此不再适合
+填写 branch 或 commit，除非同时改成源码构建路径或显式指定可用的
+`ARIA2_STATIC_RELEASE`。
 
 `core` 配置会启用 HTTPS、BitTorrent、Metalink、gzip、SQLite cookie、
 XML-RPC 和 WebSocket 支持。为了让静态链接更容易在不同 Linux 环境中工作，
@@ -88,28 +107,25 @@ Intel macOS 可以把 `ARCH` 改成 `x86_64`，并使用
 
 ## Windows 构建
 
-Windows CI 默认在 `windows-2022` runner 上使用 MSYS2 UCRT64/MinGW 直接编译，
-依赖通过 MSYS2 `pacman` 安装，避免在 Docker 构建阶段逐个下载第三方源码。
-构建脚本会使用 WinTLS，静态链接 zlib、expat 和 sqlite，并禁用 WebSocket RPC
-以避开 aria2 内置 wslay 子项目在 MSYS2 下的旧 `configure` 兼容问题，然后生成
-`win_amd64` wheel。
+Windows CI 默认参考 `aria2-wheel` 的下载打包方案，在 `windows-2022` runner
+上下载 `abcfy2/aria2-static-build` 发布页中的 `x86_64-w64-mingw32` 静态产物，
+然后生成 `win_amd64` wheel。该静态产物使用 aria2 官方文档推荐的 mingw-w64
+目标构建；官方源码交叉编译路线的核心形式是
+`HOST=x86_64-w64-mingw32 ./mingw-config`。
 
 ```bash
-python scripts/build_windows_msys2.py
+python scripts/build_windows_static.py
 ```
 
 默认目标是：
 
 ```text
-MSYSTEM=UCRT64
 ARIA2_WHEEL_PLATFORM_TAG=win_amd64
 ```
 
-如果需要回退到传统 MINGW64 环境，可以设置 `MSYSTEM=MINGW64`，但 CI 默认使用
-UCRT64。
-
-仓库中仍保留 `scripts/build_windows_mingw.py` 和 `docker/windows-mingw.Dockerfile`，
-用于复刻 aria2 上游的 Linux mingw-w64 交叉编译路线，但 CI 不再默认使用它。
+仓库中仍保留 `scripts/build_windows_msys2.py`、`scripts/build_windows_mingw.py`
+和 `docker/windows-mingw.Dockerfile`，用于排查或复刻源码构建路线，但 CI 不再
+默认使用它们。
 
 ## 使用 uv 构建
 
